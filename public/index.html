@@ -6,6 +6,9 @@
     <title>MedMap - Tamil Nadu 38-District 108 & eRaktKosh Platform</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="/socket.io/socket.io.js"></script>
+    <!-- Leaflet CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col">
 
@@ -122,6 +125,10 @@
             <div id="spatialResult" class="bg-slate-950 border border-slate-800 p-5 rounded-xl text-sm text-slate-300">
                 Awaiting geospatial lookup...
             </div>
+            
+            <!-- Leaflet Interactive Map Container -->
+            <div id="map" style="height: 350px; width: 100%; border-radius: 12px; border: 1px solid #334155; z-index: 1;"></div>
+
             <div class="flex justify-between pt-4 border-t border-slate-800">
                 <button onclick="switchTab('mod2')" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-xs font-bold">&larr; Previous</button>
                 <button onclick="switchTab('mod4')" class="bg-red-600 hover:bg-red-500 text-white px-5 py-2.5 rounded-lg text-xs font-bold">Next: 108 Fleet Routing &rarr;</button>
@@ -221,6 +228,11 @@
                 activeBtn.classList.remove('bg-slate-800', 'text-slate-300');
                 activeBtn.classList.add('bg-red-600', 'text-white');
             }
+
+            // Invalidate map size if switching to Module 3 so tiles render correctly
+            if (tabId === 'mod3' && map) {
+                setTimeout(() => map.invalidateSize(), 150);
+            }
         }
 
         function detectGPS() {
@@ -239,6 +251,9 @@
         }
 
         let globalState = null;
+        let map = null;
+        let incidentMarker = null;
+        let hospitalMarker = null;
 
         async function submitTriage() {
             const lat = parseFloat(document.getElementById('lat').value);
@@ -282,6 +297,9 @@
                 </div>
             `;
 
+            // Render Leaflet Map in Module 3
+            renderLeafletMap(lat, lng, h);
+
             const amb = globalState.nearest108Ambulance;
             document.getElementById('fleetResult').innerHTML = `
                 <div class="space-y-2">
@@ -307,6 +325,32 @@
             document.getElementById('donorResult').innerHTML = donorHtml;
 
             switchTab('mod2');
+        }
+
+        function renderLeafletMap(userLat, userLng, hospital) {
+            setTimeout(() => {
+                if (!map) {
+                    map = L.map('map').setView([userLat, userLng], 13);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '© OpenStreetMap contributors'
+                    }).addTo(map);
+                } else {
+                    map.setView([userLat, userLng], 13);
+                    if (incidentMarker) map.removeLayer(incidentMarker);
+                    if (hospitalMarker) map.removeLayer(hospitalMarker);
+                }
+
+                incidentMarker = L.marker([userLat, userLng]).addTo(map)
+                    .bindPopup("<b>🚨 Incident Scene</b><br>Accident reported here.")
+                    .openPopup();
+
+                hospitalMarker = L.marker([hospital.lat, hospital.lng]).addTo(map)
+                    .bindPopup(`<b>🏥 ${hospital.name}</b><br>ICU Beds Available: ${hospital.icuBeds}`);
+
+                const bounds = L.latLngBounds([[userLat, userLng], [hospital.lat, hospital.lng]]);
+                map.fitBounds(bounds, { padding: [40, 40] });
+                map.invalidateSize();
+            }, 250);
         }
 
         async function unmaskDonor(donorId, incidentId) {
@@ -391,7 +435,5 @@
             document.getElementById('adminResult').innerHTML = html;
         }
     </script>
-</body>
-</html>
 </body>
 </html>
