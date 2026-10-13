@@ -13,11 +13,11 @@
   </style>
 </head>
 <body>
-  <h2>?? Ambulance Driver Terminal (TN-108-AMB-04)</h2>
+  <h2>🚑 Ambulance Driver Terminal (TN-108-AMB-04)</h2>
   <div class="card">
     <p>Status: <span id="status">Waiting for emergency dispatch...</span></p>
     <div id="alertBox" style="display: none;">
-      <h3>?? Incoming Emergency Dispatch!</h3>
+      <h3 style="color: #facc15;">🚨 Incoming Emergency Dispatch!</h3>
       <p id="incidentDetails"></p>
       <button onclick="acceptDispatch()">Accept & Dispatch Unit</button>
     </div>
@@ -30,8 +30,8 @@
 
     socket.on("new_incident", (data) => {
       activeIncident = data;
-      document.getElementById("status").innerText = "?? Emergency Alert Received!";
-      document.getElementById("incidentDetails").innerText = Location; Lat , Lng  | Severity ;
+      document.getElementById("status").innerText = "🚨 Emergency Alert Received!";
+      document.getElementById("incidentDetails").innerText = `Location: Lat ${data.lat}, Lng ${data.lng} | Type: ${data.accidentType}`;
       document.getElementById("alertBox").style.display = "block";
     });
 
@@ -62,7 +62,7 @@
 
         if (stepCount >= steps) {
           clearInterval(interval);
-          document.getElementById("status").innerText = "? Ambulance Arrived at Scene!";
+          document.getElementById("status").innerText = "✅ Ambulance Arrived at Scene!";
           socket.emit("arrived_at_scene", incident);
         }
       }, 1500);
