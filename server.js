@@ -195,9 +195,33 @@ app.get('/api/admin/hospitals', (req, res) => {
   });
 });
 
+// --- SOCKET.IO REAL-TIME EVENT HANDLERS ---
 io.on('connection', (socket) => {
   socket.on('update-location', (data) => {
     io.emit('live-fleet-feed', data);
+  });
+
+  // 1. When a bystander reports a new incident
+  socket.on("report_incident", (incidentData) => {
+    console.log("🚨 New Incident Reported:", incidentData);
+    io.emit("new_incident", incidentData);
+  });
+
+  // 2. When a driver accepts the dispatch
+  socket.on("driver_accepted", (incident) => {
+    console.log("🚑 Driver accepted dispatch for incident:", incident);
+    io.emit("dispatch_accepted", incident);
+  });
+
+  // 3. Receive live GPS coordinates from the driver and relay them
+  socket.on("update_ambulance_location", (locationData) => {
+    io.emit("ambulance_moved", locationData);
+  });
+
+  // 4. When the ambulance arrives at the scene
+  socket.on("arrived_at_scene", (incident) => {
+    console.log("✅ Ambulance arrived at scene.");
+    io.emit("incident_resolved", incident);
   });
 });
 

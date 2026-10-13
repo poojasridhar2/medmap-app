@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>MedMap - Driver Dispatch Terminal</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #0f172a; color: #fff; margin: 0; padding: 20px; }
+    h2 { color: #38bdf8; }
+    .card { background: #1e293b; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+    button { background: #22c55e; color: white; border: none; padding: 10px 20px; font-size: 16px; border-radius: 4px; cursor: pointer; }
+    button:hover { background: #16a34a; }
+    #status { font-weight: bold; color: #facc15; }
+  </style>
+</head>
+<body>
+  <h2>?? Ambulance Driver Terminal (TN-108-AMB-04)</h2>
+  <div class="card">
+    <p>Status: <span id="status">Waiting for emergency dispatch...</span></p>
+    <div id="alertBox" style="display: none;">
+      <h3>?? Incoming Emergency Dispatch!</h3>
+      <p id="incidentDetails"></p>
+      <button onclick="acceptDispatch()">Accept & Dispatch Unit</button>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    let activeIncident = null;
+
+    socket.on("new_incident", (data) => {
+      activeIncident = data;
+      document.getElementById("status").innerText = "?? Emergency Alert Received!";
+      document.getElementById("incidentDetails").innerText = Location; Lat , Lng  | Severity ;
+      document.getElementById("alertBox").style.display = "block";
+    });
+
+    function acceptDispatch() {
+      document.getElementById("status").innerText = "En Route to Incident Scene...";
+      document.getElementById("alertBox").style.display = "none";
+      
+      socket.emit("driver_accepted", activeIncident);
+      startSimulation(activeIncident);
+    }
+
+    function startSimulation(incident) {
+      let currentLat = incident.lat - 0.05; 
+      let currentLng = incident.lng - 0.05;
+      let steps = 20;
+      let stepCount = 0;
+
+      const interval = setInterval(() => {
+        stepCount++;
+        currentLat += (incident.lat - currentLat) / (steps - stepCount + 1);
+        currentLng += (incident.lng - currentLng) / (steps - stepCount + 1);
+
+        socket.emit("update_ambulance_location", {
+          lat: currentLat,
+          lng: currentLng,
+          ambulanceId: "TN-108-AMB-04"
+        });
+
+        if (stepCount >= steps) {
+          clearInterval(interval);
+          document.getElementById("status").innerText = "? Ambulance Arrived at Scene!";
+          socket.emit("arrived_at_scene", incident);
+        }
+      }, 1500);
+    }
+  </script>
+</body>
+</html>

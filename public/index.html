@@ -55,7 +55,7 @@
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                    <label class="block text-xs font-semibold text-slate-400 mb-1">1. Accident Type / Scale</label>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Accident Type / Scale</label>
                     <select id="accidentType" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-sm text-slate-200">
                         <option value="single">Single Vehicle / Minor Fall</option>
                         <option value="pedestrian">Pedestrian Struck</option>
@@ -63,28 +63,28 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-slate-400 mb-1">2. Breathing Status</label>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Breathing Status</label>
                     <select id="breathing" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-sm text-slate-200">
                         <option value="normal">Normal Respiration</option>
                         <option value="none">Severe Distress / None</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-slate-400 mb-1">3. Consciousness Level</label>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Consciousness Level</label>
                     <select id="consciousness" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-sm text-slate-200">
                         <option value="conscious">Conscious & Alert</option>
                         <option value="unconscious">Unconscious / Unresponsive</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-slate-400 mb-1">4. Severe Bleeding</label>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Severe Bleeding</label>
                     <select id="bleeding" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-sm text-slate-200">
                         <option value="none">No Heavy Bleeding</option>
                         <option value="severe">Severe Arterial Bleeding</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-slate-400 mb-1">5. Victim Mobility</label>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Victim Mobility</label>
                     <select id="mobility" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-sm text-slate-200">
                         <option value="mobile">Mobile / Able to Move</option>
                         <option value="trapped">Trapped / Immobile</option>
@@ -229,7 +229,6 @@
                     document.getElementById('lat').value = pos.coords.latitude.toFixed(4);
                     document.getElementById('lng').value = pos.coords.longitude.toFixed(4);
                 }, () => {
-                    // Default fallback anchored securely to Vellore
                     document.getElementById('lat').value = "12.9165";
                     document.getElementById('lng').value = "79.1325";
                 }, { timeout: 3000 });
@@ -251,10 +250,15 @@
             const mobility = document.getElementById('mobility').value;
             const victims = parseInt(document.getElementById('victims').value);
 
+            const incidentPayload = { lat, lng, accidentType, breathing, consciousness, bleeding, mobility, victims };
+
+            // Broadcast incident live via Socket.io to driver terminals
+            socket.emit('report_incident', incidentPayload);
+
             const res = await fetch('/api/triage', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ lat, lng, accidentType, breathing, consciousness, bleeding, mobility, victims })
+                body: JSON.stringify(incidentPayload)
             });
             globalState = await res.json();
 
@@ -289,7 +293,7 @@
                 </div>
             `;
 
-            let donorHtml = `<p class="text-emerald-400 font-bold mb-2">✓ Verified Donors Matched via eRaktKosh / TNSACS within ${globalState.protocol.searchRadiusKm}km Radius[cite: 1]</p>`;
+            let donorHtml = `<p class="text-emerald-400 font-bold mb-2">✓ Verified Donors Matched via eRaktKosh / TNSACS within ${globalState.protocol.searchRadiusKm}km Radius</p>`;
             if (globalState.nearbyDonors.length === 0) {
                 donorHtml += `<p class="text-slate-400">No immediate donors in direct proximity. Check statewide blood directories in Module 8.</p>`;
             } else {
@@ -324,20 +328,42 @@
             }, 1500);
         }
 
+        // --- REAL-TIME SOCKET.IO LISTENERS FOR INTERACTIVE SIMULATION ---
         socket.on('live-fleet-feed', (data) => {
             const logBox = document.getElementById('telemetryLog');
-            logBox.innerHTML += `<div>[Avasaram 108 App] ${data.unitId} -> Lat: ${data.lat.toFixed(4)}, Lng: ${data.lng.toFixed(4)} | ETA: ${data.etaMinutes} mins</div>`;
-            logBox.scrollTop = logBox.scrollHeight;
+            if (logBox) {
+                logBox.innerHTML += `<div>[Avasaram 108 App] ${data.unitId} -> Lat: ${data.lat.toFixed(4)}, Lng: ${data.lng.toFixed(4)} | ETA: ${data.etaMinutes} mins</div>`;
+                logBox.scrollTop = logBox.scrollHeight;
+            }
+        });
+
+        socket.on('dispatch_accepted', (incident) => {
+            alert("🚑 An ambulance driver has accepted the dispatch for your reported incident and is en route!");
+        });
+
+        socket.on('ambulance_moved', (data) => {
+            const logBox = document.getElementById('telemetryLog');
+            if (logBox) {
+                logBox.innerHTML += `<div>[Live GPS Telemetry] ${data.ambulanceId} -> Lat: ${data.lat.toFixed(4)}, Lng: ${data.lng.toFixed(4)}</div>`;
+                logBox.scrollTop = logBox.scrollHeight;
+            }
+        });
+
+        socket.on('incident_resolved', (incident) => {
+            alert("✅ Emergency ambulance has successfully arrived at the scene!");
         });
 
         const sseSource = new EventSource('/api/hospital/stream');
         sseSource.onmessage = function(event) {
             const data = JSON.parse(event.data);
-            document.getElementById('sseBox').innerHTML = `
-                <p class="text-emerald-400 font-bold">🟢 Live ER Trauma Bay Sync Connected</p>
-                <p class="mt-2">Active Emergency Cases in Queue: <strong>${data.activeIncidentsQueue}</strong></p>
-                <p class="text-xs text-slate-400 mt-1">Trauma Bay Status: ${data.traumaBayStatus} | Last Synced: ${data.timestamp}</p>
-            `;
+            const sseBox = document.getElementById('sseBox');
+            if (sseBox) {
+                sseBox.innerHTML = `
+                    <p class="text-emerald-400 font-bold">🟢 Live ER Trauma Bay Sync Connected</p>
+                    <p class="mt-2">Active Emergency Cases in Queue: <strong>${data.activeIncidentsQueue}</strong></p>
+                    <p class="text-xs text-slate-400 mt-1">Trauma Bay Status: ${data.traumaBayStatus} | Last Synced: ${data.timestamp}</p>
+                `;
+            }
         };
 
         async function sendSmsFallback() {
@@ -354,8 +380,8 @@
         async function loadAdminPanel() {
             const res = await fetch('/api/admin/hospitals');
             const data = await res.json();
-            let html = `<p class="text-purple-400 font-bold mb-3">✓ Statewide Grid Active: ${data.totalHospitals} Hospitals, ${data.totalPhcs}[cite: 1] & ${data.total108Units} 108 Units</p>`;
-            html += `<h4 class="font-bold mt-4 mb-2 text-white">Official Blood Bank Repositories & Association Contacts[cite: 1]:</h4>`;
+            let html = `<p class="text-purple-400 font-bold mb-3">✓ Statewide Grid Active: ${data.totalDistricts} Districts, ${data.totalPhcs} & ${data.total108Units}</p>`;
+            html += `<h4 class="font-bold mt-4 mb-2 text-white">Official Blood Bank Repositories & Association Contacts:</h4>`;
             data.stateBloodDirectories.forEach(a => {
                 html += `<div class="bg-slate-900 p-3 rounded mb-2 border border-slate-800 text-xs">
                     <strong>${a.name}</strong><br>
@@ -365,5 +391,7 @@
             document.getElementById('adminResult').innerHTML = html;
         }
     </script>
+</body>
+</html>
 </body>
 </html>
