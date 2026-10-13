@@ -411,15 +411,37 @@
         };
 
         async function sendSmsFallback() {
-            const rawSmsString = document.getElementById('smsPayloadInput').value;
-            const res = await fetch('/api/sms-fallback', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ rawSmsString })
-            });
-            const data = await res.json();
-            document.getElementById('smsResult').innerHTML = `<span class="text-emerald-400 font-bold">✓ ${data.message}</span><br><code class="text-xs">${data.parsedRecord}</code>`;
-        }
+    const rawSmsString = document.getElementById('smsPayloadInput').value;
+    const resultBox = document.getElementById('smsResult');
+    
+    resultBox.innerHTML = `<span class="text-amber-400 animate-pulse">📡 [Cellular Gateway] Initializing GSM 900MHz burst transmission...</span>`;
+    
+    setTimeout(async () => {
+        const res = await fetch('/api/sms-fallback', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rawSmsString })
+        });
+        const data = await res.json();
+        
+        // Parse components for structured display
+        const parts = rawSmsString.split('#');
+        
+        resultBox.innerHTML = `
+            <div class="space-y-2 border border-emerald-800/60 bg-emerald-950/20 p-3 rounded-lg">
+                <p class="text-emerald-400 font-bold">✓ ${data.message}</p>
+                <p class="text-xs text-slate-300"><strong>Gateway Provider:</strong> ${data.gateway}</p>
+                <div class="bg-slate-950 p-2 rounded border border-slate-800 text-xs font-mono space-y-1">
+                    <div><span class="text-slate-500">Protocol:</span> ${parts[0] || 'MEDMAP'}</div>
+                    <div><span class="text-slate-500">Target Dest:</span> ${parts[1] || '108'} EMS Hub</div>
+                    <div><span class="text-slate-500">Coordinates:</span> ${parts[3] || 'N/A'}</div>
+                    <div><span class="text-slate-500">Triage Tier:</span> <span class="text-red-400 font-bold">${parts[4] || 'CRITICAL'}</span></div>
+                    <div><span class="text-slate-500">Condition:</span> ${parts[5] || 'Unconscious'}</div>
+                </div>
+            </div>
+        `;
+    }, 800);
+}
 
         async function loadAdminPanel() {
             const res = await fetch('/api/admin/hospitals');
