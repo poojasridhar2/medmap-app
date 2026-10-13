@@ -17,7 +17,12 @@
             <div class="bg-red-600 text-white font-black px-3 py-1.5 rounded-lg text-lg tracking-wider">MEDMAP v4.0</div>
             <span class="text-xs bg-red-950 text-red-400 border border-red-800 px-2.5 py-1 rounded-full font-semibold">TN 108 EMS & eRaktKosh Grid</span>
         </div>
-        <div class="text-sm text-slate-400 hidden md:block">Localhost Real-Time Command Console</div>
+        <div class="flex items-center space-x-4">
+            <a href="/driver.html" target="_blank" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3.5 py-2 rounded-lg font-bold transition flex items-center gap-1.5 shadow-md">
+                🚑 Open Driver Terminal
+            </a>
+            <div class="text-sm text-slate-400 hidden md:block">Localhost Real-Time Command Console</div>
+        </div>
     </header>
 
     <main class="flex-1 max-w-6xl w-full mx-auto p-4 md:p-6 space-y-6">
@@ -411,37 +416,37 @@
         };
 
         async function sendSmsFallback() {
-    const rawSmsString = document.getElementById('smsPayloadInput').value;
-    const resultBox = document.getElementById('smsResult');
-    
-    resultBox.innerHTML = `<span class="text-amber-400 animate-pulse">📡 [Cellular Gateway] Initializing GSM 900MHz burst transmission...</span>`;
-    
-    setTimeout(async () => {
-        const res = await fetch('/api/sms-fallback', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ rawSmsString })
-        });
-        const data = await res.json();
-        
-        // Parse components for structured display
-        const parts = rawSmsString.split('#');
-        
-        resultBox.innerHTML = `
-            <div class="space-y-2 border border-emerald-800/60 bg-emerald-950/20 p-3 rounded-lg">
-                <p class="text-emerald-400 font-bold">✓ ${data.message}</p>
-                <p class="text-xs text-slate-300"><strong>Gateway Provider:</strong> ${data.gateway}</p>
-                <div class="bg-slate-950 p-2 rounded border border-slate-800 text-xs font-mono space-y-1">
-                    <div><span class="text-slate-500">Protocol:</span> ${parts[0] || 'MEDMAP'}</div>
-                    <div><span class="text-slate-500">Target Dest:</span> ${parts[1] || '108'} EMS Hub</div>
-                    <div><span class="text-slate-500">Coordinates:</span> ${parts[3] || 'N/A'}</div>
-                    <div><span class="text-slate-500">Triage Tier:</span> <span class="text-red-400 font-bold">${parts[4] || 'CRITICAL'}</span></div>
-                    <div><span class="text-slate-500">Condition:</span> ${parts[5] || 'Unconscious'}</div>
-                </div>
-            </div>
-        `;
-    }, 800);
-}
+            const rawSmsString = document.getElementById('smsPayloadInput').value;
+            const resultBox = document.getElementById('smsResult');
+            
+            resultBox.innerHTML = `<span class="text-amber-400 animate-pulse">📡 [Cellular Gateway] Initializing GSM 900MHz burst transmission...</span>`;
+            
+            setTimeout(async () => {
+                const res = await fetch('/api/sms-fallback', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ rawSmsString })
+                });
+                const data = await res.json();
+                
+                // Parse components for structured display
+                const parts = rawSmsString.split('#');
+                
+                resultBox.innerHTML = `
+                    <div class="space-y-2 border border-emerald-800/60 bg-emerald-950/20 p-3 rounded-lg">
+                        <p class="text-emerald-400 font-bold">✓ ${data.message}</p>
+                        <p class="text-xs text-slate-300"><strong>Gateway Provider:</strong> ${data.gateway}</p>
+                        <div class="bg-slate-950 p-2 rounded border border-slate-800 text-xs font-mono space-y-1">
+                            <div><span class="text-slate-500">Protocol:</span> ${parts[0] || 'MEDMAP'}</div>
+                            <div><span class="text-slate-500">Target Dest:</span> ${parts[1] || '108'} EMS Hub</div>
+                            <div><span class="text-slate-500">Coordinates:</span> ${parts[3] || 'N/A'}</div>
+                            <div><span class="text-slate-500">Triage Tier:</span> <span class="text-red-400 font-bold">${parts[4] || 'CRITICAL'}</span></div>
+                            <div><span class="text-slate-500">Condition:</span> ${parts[5] || 'Unconscious'}</div>
+                        </div>
+                    </div>
+                `;
+            }, 800);
+        }
 
         async function loadAdminPanel() {
             const res = await fetch('/api/admin/hospitals');
